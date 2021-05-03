@@ -1,0 +1,5 @@
+version: "1"
+rules:
+  - base: master
+    upstream: djyde/cusdis:master
+    mergeMethod: hardreset
