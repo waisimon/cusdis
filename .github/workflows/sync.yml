@@ -1,7 +1,7 @@
 name: Sync with Upstream
 on:
   schedule:
-    - cron: "0 */24 * * *"  # run every two hours
+    - cron: "0 0 * * *"  # run every two hours
   workflow_dispatch:
 jobs:
   Sync:
