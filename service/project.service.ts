@@ -1,4 +1,4 @@
-import { Prisma, User } from '@prisma/client'
+import { Prisma, Project, User } from '@prisma/client'
 import { nanoid } from 'nanoid'
 import { RequestScopeService } from '.'
 import { prisma } from '../utils.server'
@@ -65,6 +65,23 @@ export class ProjectService extends RequestScopeService {
     })
 
     return id
+  }
+
+  async getFirstProject(ownerId: string, options?: {
+    select?: Prisma.ProjectSelect
+  }) {
+    const project = await prisma.project.findFirst({
+      where: {
+        ownerId,
+        deletedAt: null
+      },
+      orderBy: {
+        createdAt: 'asc'
+      },
+      select:  options?.select
+    })
+
+    return project as Project
   }
 
   async fetchLatestComment(

@@ -1,5 +1,5 @@
 import { User } from "@prisma/client"
-import { Box, Button, Checkbox, Container, FormControl, FormLabel, Heading, HStack, Input, InputGroup, InputRightAddon, Switch, useToast, VStack } from "@chakra-ui/react"
+import { Box, Button, Checkbox, Container, FormControl, FormLabel, Heading, HStack, Input, InputGroup, InputRightAddon, InputRightElement, Switch, useToast, VStack } from "@chakra-ui/react"
 import React from "react"
 import { useMutation } from "react-query"
 import { Footer } from "../components/Footer"
@@ -8,6 +8,7 @@ import { UserSession } from "../service"
 import { apiClient } from "../utils.client"
 import { getSession, prisma } from "../utils.server"
 import { Head } from "../components/Head"
+import { MainLayout } from "../components/Layout"
 
 
 // From https://stackoverflow.com/questions/46155/how-to-validate-an-email-address-in-javascript
@@ -21,9 +22,11 @@ function validateEmail(email) {
 
 const updateUserSettings = async (params: {
   notificationEmail?: string,
-  enableNewCommentNotification?: boolean
+  enableNewCommentNotification?: boolean,
+  displayName?: string,
 }) => {
   const res = await apiClient.put(`/user`, {
+    displayName: params.displayName,
     notificationEmail: params.notificationEmail,
     enableNewCommentNotification: params.enableNewCommentNotification
   })
@@ -37,16 +40,18 @@ function UserPage(props: {
 
   const updateNotificationEmailMutation = useMutation(updateUserSettings)
   const updatePreferenceMutation = useMutation(updateUserSettings)
+  const updateDisplayNameMutation = useMutation(updateUserSettings)
 
   const toast = useToast()
 
-  const notificationEmailInputRef = React.useRef(null)
+  const notificationEmailInputRef = React.useRef<HTMLInputElement>(null)
+  const displayNameInputRef = React.useRef<HTMLInputElement>(null)
 
   function onClickSaveNotificationEmail() {
 
     const value = notificationEmailInputRef.current.value
 
-    if(!validateEmail(value)) {
+    if (!validateEmail(value)) {
       toast({
         title: 'Email address is not valid',
         status: 'error',
@@ -96,25 +101,56 @@ function UserPage(props: {
 
   return (
     <>
-  <Head title="User Settings" />
-      <Navbar session={props.session} />
-      <Container maxWidth="5xl" mt={24}>
+      <MainLayout session={props.session}>
 
         <VStack alignItems="flex-start" spacing={12}>
-          <Heading>Hi, {props.session.user.name}</Heading>
+          <Heading size="md">Settings</Heading>
 
           <VStack alignItems="flex-start" spacing={4}>
             <Heading size="md">Account</Heading>
             <HStack spacing={4}>
 
               <FormControl>
-                <FormLabel>Username</FormLabel>
+                <FormLabel fontSize="sm">Username</FormLabel>
                 <Input disabled value={props.session.user.name} />
               </FormControl>
 
               <FormControl>
-                <FormLabel>Email</FormLabel>
+                <FormLabel fontSize="sm">Email</FormLabel>
                 <Input disabled value={props.session.user.email} />
+              </FormControl>
+            </HStack>
+
+            <HStack spacing={4}>
+
+              <FormControl>
+                <FormLabel fontSize="sm">Display Name</FormLabel>
+                <InputGroup size="md">
+                  <Input ref={displayNameInputRef} defaultValue={props.defaultUserInfo.displayName || props.session.user.name} />
+
+                  <InputRightElement width="4.5rem">
+                    <Button h="1.75rem" size="sm" isLoading={updateDisplayNameMutation.isLoading} onClick={
+                      _ => void updateDisplayNameMutation.mutate({ displayName: displayNameInputRef.current.value }, {
+                        onSuccess() {
+                          toast({
+                            title: 'Updated',
+                            status: 'success',
+                            position: 'top'
+                          })
+                        },
+                        onError() {
+                          toast({
+                            title: 'Something went wrong',
+                            status: 'error',
+                            position: 'top'
+                          })
+                        }
+                      })
+                    }>
+                      Save
+                    </Button>
+                  </InputRightElement>
+                </InputGroup>
               </FormControl>
             </HStack>
 
@@ -122,14 +158,7 @@ function UserPage(props: {
 
           <VStack alignItems="flex-start" spacing={4}>
             <Heading size="md">Notification</Heading>
-            <VStack spacing={4}>
-              <FormControl>
-                <FormLabel>Notification email</FormLabel>
-                <HStack spacing={2}>
-                  <Input defaultValue={props.defaultUserInfo.notificationEmail || props.defaultUserInfo.email} ref={notificationEmailInputRef} type="email" />
-                  <Button px={8} isLoading={updateNotificationEmailMutation.isLoading} onClick={onClickSaveNotificationEmail}>Save</Button>
-                </HStack>
-              </FormControl>
+            <VStack spacing={8}>
 
               <FormControl>
                 <FormLabel>Preferences</FormLabel>
@@ -137,20 +166,34 @@ function UserPage(props: {
                   onCheckNotificationPreference({
                     enableNewCommentNotification: e.target.checked
                   })
-                }} defaultChecked={props.defaultUserInfo.enableNewCommentNotification}>New comment notification</Checkbox>
+                }} defaultChecked={props.defaultUserInfo.enableNewCommentNotification}>Enable new comment notification</Checkbox>
               </FormControl>
+
+              <FormControl>
+                <FormLabel fontSize="sm"> Notification email</FormLabel>
+                <HStack spacing={2}>
+                  <InputGroup size="md">
+                    <Input defaultValue={props.defaultUserInfo.notificationEmail || props.defaultUserInfo.email} ref={notificationEmailInputRef} type="email" />
+                    <InputRightElement width="4.5rem">
+                      <Button h="1.75rem" size="sm" isLoading={updateNotificationEmailMutation.isLoading} onClick={onClickSaveNotificationEmail}>Save</Button>
+                    </InputRightElement>
+                  </InputGroup>
+                </HStack>
+              </FormControl>
+
             </VStack>
           </VStack>
 
         </VStack>
-      </Container>
 
-      <Footer maxWidth="5xl" />
+        {/* <Footer maxWidth="5xl" /> */}
+      </MainLayout>
+
     </>
   )
 }
 
-type DefaultUserInfo = Pick<User, "notificationEmail" | "email" | "name" | "enableNewCommentNotification">
+type DefaultUserInfo = Pick<User, "notificationEmail" | "email" | "name" | "enableNewCommentNotification" | "displayName">
 export async function getServerSideProps(ctx) {
   const session = await getSession(ctx.req)
 
@@ -171,7 +214,8 @@ export async function getServerSideProps(ctx) {
       notificationEmail: true,
       enableNewCommentNotification: true,
       name: true,
-      email: true
+      email: true,
+      displayName: true
     }
   }) as DefaultUserInfo
 

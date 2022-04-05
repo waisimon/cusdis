@@ -11,7 +11,7 @@ const providers: AppProviders = []
 if (resolvedConfig.useLocalAuth) {
   providers.push(
     Providers.Credentials({
-      name: 'Userename',
+      name: 'Username',
       credentials: {
         username: {
           label: 'Username',
@@ -58,6 +58,15 @@ if (resolvedConfig.useGithub) {
       clientSecret: process.env.GITHUB_SECRET,
       scope: 'read:user,user:email',
     }),
+  )
+}
+
+if (resolvedConfig.useGitlab) {
+  providers.push(
+    Providers.GitLab({
+      clientId: process.env.GITLAB_ID,
+      clientSecret: process.env.GITLAB_SECRET,
+    })
   )
 }
 
